@@ -131,12 +131,14 @@ mod parser_tests {
         assert_eq!(file.end_of_file_token.kind, TokenKind::EndOfFile);
 
         let foo = file.expressions[0].unwrap_let();
+        assert_eq!(foo.name_token.kind, TokenKind::Name("foo".to_string()));
         let foo_value = foo.value.clone().unwrap();
 
         let block = foo_value.unwrap_block();
         assert_eq!(block.expressions.len(), 2);
 
         let a = block.expressions[0].unwrap_let();
+        assert_eq!(a.name_token.kind, TokenKind::Name("a".to_string()));
         assert_eq!(a.value, None);
 
         let integer_5 = block.expressions[1].unwrap_integer();
@@ -147,10 +149,10 @@ mod parser_tests {
     fn export_test() {
         let filepath = "Block.fpl".to_string();
         let source = "
-		export let foo =
+		export foo =
 		{
 			let a
-			export 5
+			export b = 5
 		}";
         let mut lexer = Lexer::new(filepath.clone(), source);
         let file = parse_file(&mut lexer).unwrap();
@@ -158,10 +160,12 @@ mod parser_tests {
         assert_eq!(file.end_of_file_token.kind, TokenKind::EndOfFile);
 
         let foo_export = file.expressions[0].unwrap_export();
-        let foo = foo_export.value.unwrap_let();
-        let foo_value = foo.value.clone().unwrap();
+        assert_eq!(
+            foo_export.name_token.kind,
+            TokenKind::Name("foo".to_string())
+        );
 
-        let block = foo_value.unwrap_block();
+        let block = foo_export.value.unwrap_block();
         assert_eq!(block.expressions.len(), 2);
 
         let a = block.expressions[0].unwrap_let();

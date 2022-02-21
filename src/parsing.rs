@@ -121,9 +121,37 @@ fn parse_primary_expression(lexer: &mut Lexer) -> Result<Ast, CompileError> {
 
         TokenKind::Export => {
             let export_token = lexer.next_token()?;
+            let name_token = lexer.next_token()?;
+            if let TokenKind::Name(_) = name_token.kind {
+            } else {
+                return Err(CompileError {
+                    location: name_token.location.clone(),
+                    message: format!(
+                        "Expected {} for export, but got {}",
+                        TokenKind::Name(String::new()).to_string(),
+                        name_token.kind.to_string(),
+                    ),
+                    notes: vec![],
+                });
+            }
+            let equals_token = lexer.next_token()?;
+            if equals_token.kind != TokenKind::Equal {
+                return Err(CompileError {
+                    location: equals_token.location.clone(),
+                    message: format!(
+                        "Expected {} for export value, but got {}",
+                        TokenKind::Name(String::new()).to_string(),
+                        equals_token.kind.to_string(),
+                    ),
+                    notes: vec![],
+                });
+            }
+            allow_newline(lexer)?;
             let value = parse_expression(lexer)?;
             Ok(Ast::Export(AstExport {
                 export_token,
+                name_token,
+                equals_token,
                 value: Box::new(value),
             }))
         }
@@ -136,7 +164,7 @@ fn parse_primary_expression(lexer: &mut Lexer) -> Result<Ast, CompileError> {
                 return Err(CompileError {
                     location: name_token.location.clone(),
                     message: format!(
-                        "Expected {}, but got {}",
+                        "Expected {} for let, but got {}",
                         TokenKind::Name(String::new()).to_string(),
                         name_token.kind.to_string(),
                     ),

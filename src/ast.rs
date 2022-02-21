@@ -128,12 +128,14 @@ impl AstTrait for AstBlock {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AstExport {
     pub export_token: Token,
+	pub name_token: Token,
+	pub equals_token: Token,
     pub value: Box<Ast>,
 }
 
 impl AstTrait for AstExport {
     fn get_location(&self) -> SourceLocation {
-        self.export_token.location.clone()
+        self.name_token.location.clone()
     }
 }
 
