@@ -108,9 +108,11 @@ mod parser_tests {
         assert_eq!(file.end_of_file_token.kind, TokenKind::EndOfFile);
 
         let a = file.expressions[0].unwrap_let();
+        assert_eq!(a.name_token.kind, TokenKind::Name("a".to_string()));
         assert_eq!(a.value, None);
 
         let b = file.expressions[1].unwrap_let();
+        assert_eq!(b.name_token.kind, TokenKind::Name("b".to_string()));
         let b_value = b.value.clone().unwrap();
         let integer_5 = b_value.unwrap_integer();
         assert_eq!(integer_5.integer_token.kind, TokenKind::Integer(5));
