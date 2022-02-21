@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Ast, AstBinary, AstFile, AstInteger, AstLet, AstName, AstUnary},
+    ast::{Ast, AstBinary, AstBlock, AstFile, AstInteger, AstLet, AstName, AstUnary},
     common::CompileError,
     lexer::Lexer,
     token::TokenKind,
@@ -117,6 +117,8 @@ fn parse_primary_expression(lexer: &mut Lexer) -> Result<Ast, CompileError> {
             Ok(Ast::Integer(AstInteger { integer_token }))
         }
 
+        TokenKind::OpenBrace => Ok(Ast::Block(parse_block(lexer)?)),
+
         TokenKind::Let => {
             let let_token = lexer.next_token()?;
             let name_token = lexer.next_token()?;
@@ -159,4 +161,63 @@ fn parse_primary_expression(lexer: &mut Lexer) -> Result<Ast, CompileError> {
             })
         }
     }
+}
+
+fn parse_block(lexer: &mut Lexer) -> Result<AstBlock, CompileError> {
+    let open_brace_token = lexer.next_token()?;
+    if open_brace_token.kind != TokenKind::OpenBrace {
+        return Err(CompileError {
+            location: open_brace_token.location.clone(),
+            message: format!(
+                "Expected {}, but got a {}",
+                TokenKind::OpenBrace.to_string(),
+                open_brace_token.kind.to_string(),
+            ),
+            notes: vec![],
+        });
+    }
+
+    let mut expressions = vec![];
+    while lexer.peek_kind()? != TokenKind::CloseBrace && lexer.peek_kind()? != TokenKind::EndOfFile
+    {
+        while lexer.peek_kind()? == TokenKind::Newline {
+            lexer.next_token()?;
+        }
+        expressions.push(parse_expression(lexer)?);
+        if lexer.peek_kind()? != TokenKind::CloseBrace && lexer.peek_kind()? != TokenKind::EndOfFile
+        {
+            let newline = lexer.next_token()?;
+            if newline.kind != TokenKind::Newline {
+                return Err(CompileError {
+                    location: newline.location.clone(),
+                    message: format!(
+                        "Expected {} or {} at the end of the expression, but got {}",
+                        TokenKind::Newline.to_string(),
+                        TokenKind::CloseBrace.to_string(),
+                        newline.kind.to_string(),
+                    ),
+                    notes: vec![],
+                });
+            }
+        }
+    }
+
+    let close_brace_token = lexer.next_token()?;
+    if close_brace_token.kind != TokenKind::CloseBrace {
+        return Err(CompileError {
+            location: close_brace_token.location.clone(),
+            message: format!(
+                "Expected {}, but got a {}",
+                TokenKind::CloseBrace.to_string(),
+                close_brace_token.kind.to_string(),
+            ),
+            notes: vec![],
+        });
+    }
+
+    Ok(AstBlock {
+        open_brace_token,
+        expressions,
+        close_brace_token,
+    })
 }

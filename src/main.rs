@@ -97,8 +97,11 @@ mod parser_tests {
 
     #[test]
     fn let_test() {
-        let filepath = "Expression.fpl".to_string();
-        let source = "let a\nlet b = 5";
+        let filepath = "Let.fpl".to_string();
+        let source = "
+			let a
+			let b = 5
+		";
         let mut lexer = Lexer::new(filepath.clone(), source);
         let file = parse_file(&mut lexer).unwrap();
         assert_eq!(file.expressions.len(), 2);
@@ -110,6 +113,33 @@ mod parser_tests {
         let b = file.expressions[1].unwrap_let();
         let b_value = b.value.clone().unwrap();
         let integer_5 = b_value.unwrap_integer();
+        assert_eq!(integer_5.integer_token.kind, TokenKind::Integer(5));
+    }
+
+    #[test]
+    fn block_test() {
+        let filepath = "Block.fpl".to_string();
+        let source = "
+		let foo =
+		{
+			let a
+			5
+		}";
+        let mut lexer = Lexer::new(filepath.clone(), source);
+        let file = parse_file(&mut lexer).unwrap();
+        assert_eq!(file.expressions.len(), 1);
+        assert_eq!(file.end_of_file_token.kind, TokenKind::EndOfFile);
+
+        let foo = file.expressions[0].unwrap_let();
+        let foo_value = foo.value.clone().unwrap();
+
+        let block = foo_value.unwrap_block();
+        assert_eq!(block.expressions.len(), 2);
+
+        let a = block.expressions[0].unwrap_let();
+        assert_eq!(a.value, None);
+
+        let integer_5 = block.expressions[1].unwrap_integer();
         assert_eq!(integer_5.integer_token.kind, TokenKind::Integer(5));
     }
 }
