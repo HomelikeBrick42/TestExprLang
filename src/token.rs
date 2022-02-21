@@ -9,6 +9,7 @@ pub enum TokenKind {
     Integer(u128),
 
     // Keywords
+    Export,
     Let,
 
     // Brackets
@@ -54,6 +55,7 @@ impl ToString for TokenKind {
             TokenKind::Integer(_) => "an integer".to_string(),
 
             // Keywords
+            TokenKind::Export => "export".to_string(),
             TokenKind::Let => "let".to_string(),
 
             // Brackets

@@ -11,6 +11,7 @@ pub trait AstTrait: Debug + Clone + PartialEq {
 pub enum Ast {
     File(AstFile),
     Block(AstBlock),
+    Export(AstExport),
     Let(AstLet),
     Unary(AstUnary),
     Binary(AstBinary),
@@ -30,6 +31,14 @@ impl Ast {
     pub fn unwrap_block(&self) -> &AstBlock {
         if let Ast::Block(block) = self {
             block
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn unwrap_export(&self) -> &AstExport {
+        if let Ast::Export(export) = self {
+            export
         } else {
             unreachable!()
         }
@@ -81,6 +90,7 @@ impl AstTrait for Ast {
         match self {
             Ast::File(file) => file.get_location(),
             Ast::Block(block) => block.get_location(),
+            Ast::Export(export) => export.get_location(),
             Ast::Let(lett) => lett.get_location(),
             Ast::Unary(unary) => unary.get_location(),
             Ast::Binary(binary) => binary.get_location(),
@@ -112,6 +122,18 @@ pub struct AstBlock {
 impl AstTrait for AstBlock {
     fn get_location(&self) -> SourceLocation {
         self.open_brace_token.location.clone()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AstExport {
+    pub export_token: Token,
+    pub value: Box<Ast>,
+}
+
+impl AstTrait for AstExport {
+    fn get_location(&self) -> SourceLocation {
+        self.export_token.location.clone()
     }
 }
 

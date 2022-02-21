@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Ast, AstBinary, AstBlock, AstFile, AstInteger, AstLet, AstName, AstUnary},
+    ast::{Ast, AstBinary, AstBlock, AstExport, AstFile, AstInteger, AstLet, AstName, AstUnary},
     common::CompileError,
     lexer::Lexer,
     token::TokenKind,
@@ -118,6 +118,15 @@ fn parse_primary_expression(lexer: &mut Lexer) -> Result<Ast, CompileError> {
         }
 
         TokenKind::OpenBrace => Ok(Ast::Block(parse_block(lexer)?)),
+
+        TokenKind::Export => {
+            let export_token = lexer.next_token()?;
+            let value = parse_expression(lexer)?;
+            Ok(Ast::Export(AstExport {
+                export_token,
+                value: Box::new(value),
+            }))
+        }
 
         TokenKind::Let => {
             let let_token = lexer.next_token()?;

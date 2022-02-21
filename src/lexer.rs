@@ -169,6 +169,12 @@ impl Lexer {
                         }
                     }
                     match &value as &str {
+                        "export" => Ok(Token {
+                            kind: TokenKind::Export,
+                            length: self.position - start_location.position,
+                            location: start_location,
+                        }),
+
                         "let" => Ok(Token {
                             kind: TokenKind::Let,
                             length: self.position - start_location.position,
