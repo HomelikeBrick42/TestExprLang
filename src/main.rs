@@ -58,7 +58,7 @@ mod lexer_tests {
 
 #[cfg(test)]
 mod parser_tests {
-    use crate::{ast::Ast, lexer::Lexer, parsing::parse_file, token::TokenKind};
+    use crate::{lexer::Lexer, parsing::parse_file, token::TokenKind};
 
     #[test]
     fn empty_file() {
@@ -79,35 +79,37 @@ mod parser_tests {
         assert_eq!(file.expressions.len(), 1);
         assert_eq!(file.end_of_file_token.kind, TokenKind::EndOfFile);
 
-        let binary_plus = if let Ast::Binary(binary) = &file.expressions[0] {
-            binary
-        } else {
-            panic!("Not a binary operator")
-        };
+        let binary_plus = file.expressions[0].unwrap_binary();
         assert_eq!(binary_plus.operator_token.kind, TokenKind::Plus);
-        let integer_1 = if let Ast::Integer(integer) = &binary_plus.left as &Ast {
-            integer
-        } else {
-            panic!("Not an integer")
-        };
+
+        let integer_1 = binary_plus.left.unwrap_integer();
         assert_eq!(integer_1.integer_token.kind, TokenKind::Integer(1));
-        let binary_asterisk = if let Ast::Binary(binary) = &binary_plus.right as &Ast {
-            binary
-        } else {
-            panic!("Not a binary operator")
-        };
+
+        let binary_asterisk = binary_plus.right.unwrap_binary();
         assert_eq!(binary_asterisk.operator_token.kind, TokenKind::Asterisk);
-        let integer_2 = if let Ast::Integer(integer) = &binary_asterisk.left as &Ast {
-            integer
-        } else {
-            panic!("Not an integer")
-        };
+
+        let integer_2 = binary_asterisk.left.unwrap_integer();
         assert_eq!(integer_2.integer_token.kind, TokenKind::Integer(2));
-        let integer_3 = if let Ast::Integer(integer) = &binary_asterisk.right as &Ast {
-            integer
-        } else {
-            panic!("Not an integer")
-        };
+
+        let integer_3 = binary_asterisk.right.unwrap_integer();
         assert_eq!(integer_3.integer_token.kind, TokenKind::Integer(3));
+    }
+
+    #[test]
+    fn let_test() {
+        let filepath = "Expression.fpl".to_string();
+        let source = "let a\nlet b = 5";
+        let mut lexer = Lexer::new(filepath.clone(), source);
+        let file = parse_file(&mut lexer).unwrap();
+        assert_eq!(file.expressions.len(), 2);
+        assert_eq!(file.end_of_file_token.kind, TokenKind::EndOfFile);
+
+        let a = file.expressions[0].unwrap_let();
+        assert_eq!(a.value, None);
+
+        let b = file.expressions[1].unwrap_let();
+        let b_value = b.value.clone().unwrap();
+        let integer_5 = b_value.unwrap_integer();
+        assert_eq!(integer_5.integer_token.kind, TokenKind::Integer(5));
     }
 }

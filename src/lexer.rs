@@ -168,11 +168,19 @@ impl Lexer {
                             _ => break 'name_loop,
                         }
                     }
-                    Ok(Token {
-                        kind: TokenKind::Name(value),
-                        length: self.position - start_location.position,
-                        location: start_location,
-                    })
+                    match &value as &str {
+                        "let" => Ok(Token {
+                            kind: TokenKind::Let,
+                            length: self.position - start_location.position,
+                            location: start_location,
+                        }),
+
+                        _ => Ok(Token {
+                            kind: TokenKind::Name(value),
+                            length: self.position - start_location.position,
+                            location: start_location,
+                        }),
+                    }
                 }
 
                 '0'..='9' => {

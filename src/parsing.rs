@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Ast, AstBinary, AstFile, AstInteger, AstName, AstUnary},
+    ast::{Ast, AstBinary, AstFile, AstInteger, AstLet, AstName, AstUnary},
     common::CompileError,
     lexer::Lexer,
     token::TokenKind,
@@ -52,15 +52,21 @@ fn parse_binary_expression(
 ) -> Result<Ast, CompileError> {
     fn get_unary_precedence(kind: TokenKind) -> usize {
         match kind {
-            TokenKind::Plus | TokenKind::Minus => 3,
+            TokenKind::Plus | TokenKind::Minus | TokenKind::ExclamationMark => 4,
             _ => 0,
         }
     }
 
     fn get_binary_precedence(kind: TokenKind) -> usize {
         match kind {
-            TokenKind::Asterisk | TokenKind::Slash => 2,
-            TokenKind::Plus | TokenKind::Minus => 1,
+            TokenKind::Asterisk | TokenKind::Slash => 3,
+            TokenKind::Plus | TokenKind::Minus => 2,
+            TokenKind::EqualEqual
+            | TokenKind::ExclamationMarkEqual
+            | TokenKind::LessThan
+            | TokenKind::GreaterThan
+            | TokenKind::LessThanEqual
+            | TokenKind::GreaterThanEqual => 1,
             _ => 0,
         }
     }
@@ -70,6 +76,7 @@ fn parse_binary_expression(
     let unary_precedence = get_unary_precedence(lexer.peek_kind()?);
     if unary_precedence > 0 {
         let operator_token = lexer.next_token()?;
+        allow_newline(lexer)?;
         let operand = parse_binary_expression(lexer, unary_precedence)?;
         left = Ast::Unary(AstUnary {
             operator_token,
@@ -86,6 +93,7 @@ fn parse_binary_expression(
         }
 
         let operator_token = lexer.next_token()?;
+        allow_newline(lexer)?;
         let right = parse_binary_expression(lexer, binary_precedence)?;
         left = Ast::Binary(AstBinary {
             left: Box::new(left),
@@ -107,6 +115,39 @@ fn parse_primary_expression(lexer: &mut Lexer) -> Result<Ast, CompileError> {
         TokenKind::Integer(_) => {
             let integer_token = lexer.next_token()?;
             Ok(Ast::Integer(AstInteger { integer_token }))
+        }
+
+        TokenKind::Let => {
+            let let_token = lexer.next_token()?;
+            let name_token = lexer.next_token()?;
+            if let TokenKind::Name(_) = name_token.kind {
+            } else {
+                return Err(CompileError {
+                    location: name_token.location.clone(),
+                    message: format!(
+                        "Expected {}, but got {}",
+                        TokenKind::Name(String::new()).to_string(),
+                        name_token.kind.to_string(),
+                    ),
+                    notes: vec![],
+                });
+            }
+            let equal_token;
+            let value;
+            if lexer.peek_kind()? == TokenKind::Equal {
+                equal_token = Some(lexer.next_token()?);
+                allow_newline(lexer)?;
+                value = Some(Box::new(parse_expression(lexer)?));
+            } else {
+                equal_token = None;
+                value = None;
+            }
+            Ok(Ast::Let(AstLet {
+                let_token,
+                name_token,
+                equal_token,
+                value,
+            }))
         }
 
         _ => {
