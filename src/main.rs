@@ -171,10 +171,12 @@ mod parser_tests {
         assert_eq!(block.expressions.len(), 2);
 
         let a = block.expressions[0].unwrap_let();
+        assert_eq!(a.name_token.kind, TokenKind::Name("a".to_string()));
         assert_eq!(a.value, None);
 
-        let export_5 = block.expressions[1].unwrap_export();
-        let integer_5 = export_5.value.unwrap_integer();
+        let export_b = block.expressions[1].unwrap_export();
+        assert_eq!(export_b.name_token.kind, TokenKind::Name("b".to_string()));
+        let integer_5 = export_b.value.unwrap_integer();
         assert_eq!(integer_5.integer_token.kind, TokenKind::Integer(5));
     }
 }
