@@ -322,4 +322,9 @@ impl Lexer {
             };
         }
     }
+
+    pub fn peek_kind(&self) -> Result<TokenKind, CompileError> {
+        // maybe dont clone the entire lexer+source tokens every time?
+        Ok(self.clone().next_token()?.kind)
+    }
 }
