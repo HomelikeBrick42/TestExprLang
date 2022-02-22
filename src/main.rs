@@ -2,6 +2,7 @@
 
 use std::{collections::VecDeque, io::Write, process::exit};
 
+use ast::AstFile;
 use parsing::parse_file;
 
 use crate::{ast::AstTrait, lexer::Lexer};
@@ -26,6 +27,39 @@ fn print_usage(stream: &mut dyn Write) -> Result<(), std::io::Error> {
     Ok(())
 }
 
+fn parse_ast_or_error(filepath: String) -> AstFile {
+    let source = std::fs::read_to_string(filepath.clone()).unwrap_or_else(|_| {
+        writeln!(std::io::stderr(), "Unable to open file: '{}'", filepath).unwrap();
+        exit(1)
+    });
+    let mut lexer = Lexer::new(filepath, &source);
+    parse_file(&mut lexer).unwrap_or_else(|error| {
+        writeln!(
+            std::io::stderr(),
+            "{}:{}:{}: Compile Error: {}",
+            error.location.filepath,
+            error.location.line,
+            error.location.column,
+            error.message,
+        )
+        .unwrap();
+        for note in error.notes {
+            if let Some(location) = &note.location {
+                writeln!(
+                    std::io::stderr(),
+                    "{}:{}:{}: ",
+                    location.filepath,
+                    location.line,
+                    location.column,
+                )
+                .unwrap();
+            }
+            writeln!(std::io::stderr(), "Note: {}", note.message).unwrap();
+        }
+        exit(1)
+    })
+}
+
 fn main() {
     let mut args: VecDeque<String> = std::env::args().into_iter().collect();
     args.pop_front().unwrap();
@@ -47,36 +81,7 @@ fn main() {
                 print_usage(&mut stderr).unwrap();
                 exit(1)
             });
-            let source = std::fs::read_to_string(filepath.clone()).unwrap_or_else(|_| {
-                writeln!(std::io::stderr(), "Unable to open file: '{}'", filepath).unwrap();
-                exit(1)
-            });
-            let mut lexer = Lexer::new(filepath, &source);
-            let file = parse_file(&mut lexer).unwrap_or_else(|error| {
-                writeln!(
-                    std::io::stderr(),
-                    "{}:{}:{}: Compile Error: {}",
-                    error.location.filepath,
-                    error.location.line,
-                    error.location.column,
-                    error.message,
-                )
-                .unwrap();
-                for note in error.notes {
-                    if let Some(location) = &note.location {
-                        writeln!(
-                            std::io::stderr(),
-                            "{}:{}:{}: ",
-                            location.filepath,
-                            location.line,
-                            location.column,
-                        )
-                        .unwrap();
-                    }
-                    writeln!(std::io::stderr(), "Note: {}", note.message).unwrap();
-                }
-                exit(1)
-            });
+            let file = parse_ast_or_error(filepath);
             writeln!(std::io::stdout(), "{}", file.dump(0)).unwrap();
         }
 
