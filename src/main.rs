@@ -9,10 +9,12 @@ use crate::{
 };
 
 mod ast;
+mod bound_nodes;
 mod common;
 mod lexer;
 mod parsing;
 mod token;
+mod types;
 
 fn print_usage(stream: &mut dyn Write) -> Result<(), std::io::Error> {
     let program_str = std::env::current_exe()
