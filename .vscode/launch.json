@@ -5,10 +5,10 @@
 			"name": "(Windows) Launch",
 			"type": "cppvsdbg",
 			"request": "launch",
-			"program": "${workspaceFolder}/target/debug/functional.exe",
+			"program": "${workspaceFolder}/target/debug/lang.exe",
 			"args": [
 				"dump_ast",
-				"test.fpl"
+				"test.lang"
 			],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
