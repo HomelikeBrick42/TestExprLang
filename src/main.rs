@@ -1,13 +1,93 @@
 #![allow(dead_code)]
 
+use std::{collections::VecDeque, io::Write, process::exit};
+
+use parsing::parse_file;
+
+use crate::{ast::AstTrait, lexer::Lexer};
+
 mod ast;
 mod common;
 mod lexer;
 mod parsing;
 mod token;
 
+fn print_usage(stream: &mut dyn Write) -> Result<(), std::io::Error> {
+    let program_path = std::env::current_exe().unwrap();
+    let program_str = program_path.to_str().unwrap();
+    writeln!(stream, "Usage: {} <command> [options]", program_str)?;
+    writeln!(stream, "Commands:")?;
+    writeln!(stream, "    {} help: Prints this message", program_str)?;
+    writeln!(
+        stream,
+        "    {} dump_ast <file>: Dumps the ast of the program",
+        program_str,
+    )?;
+    Ok(())
+}
+
 fn main() {
-    println!("Hello, world!");
+    let mut args: VecDeque<String> = std::env::args().into_iter().collect();
+    args.pop_front().unwrap();
+    let command = args.pop_front().unwrap_or_else(|| {
+        let mut stderr = std::io::stderr();
+        writeln!(stderr, "Please specify a command").unwrap();
+        print_usage(&mut stderr).unwrap();
+        exit(1)
+    });
+    match &command as &str {
+        "help" => {
+            print_usage(&mut std::io::stdout()).unwrap();
+        }
+
+        "dump_ast" => {
+            let filepath = args.pop_front().unwrap_or_else(|| {
+                let mut stderr = std::io::stderr();
+                writeln!(stderr, "Please specify a file").unwrap();
+                print_usage(&mut stderr).unwrap();
+                exit(1)
+            });
+            let source = std::fs::read_to_string(filepath.clone()).unwrap_or_else(|_| {
+                writeln!(std::io::stderr(), "Unable to open file: '{}'", filepath).unwrap();
+                exit(1)
+            });
+            let mut lexer = Lexer::new(filepath, &source);
+            let file = parse_file(&mut lexer).unwrap_or_else(|error| {
+                writeln!(
+                    std::io::stderr(),
+                    "{}:{}:{}: Compile Error: {}",
+                    error.location.filepath,
+                    error.location.line,
+                    error.location.column,
+                    error.message,
+                )
+                .unwrap();
+                for note in error.notes {
+                    if let Some(location) = &note.location {
+                        writeln!(
+                            std::io::stderr(),
+                            "{}:{}:{}: ",
+                            location.filepath,
+                            location.line,
+                            location.column,
+                        )
+                        .unwrap();
+                    }
+                    writeln!(std::io::stderr(), "Note: {}", note.message).unwrap();
+                }
+                exit(1)
+            });
+            writeln!(std::io::stdout(), "{}", file.dump(0)).unwrap();
+        }
+
+        _ => {
+            let mut stderr = std::io::stderr();
+            writeln!(stderr, "Unknown command: '{}'", command).unwrap();
+            print_usage(&mut stderr).unwrap();
+            exit(1)
+        }
+    }
+    return;
 }
 
 #[cfg(test)]

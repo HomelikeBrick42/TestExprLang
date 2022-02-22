@@ -1,10 +1,22 @@
 use std::fmt::Debug;
 
-use crate::{common::SourceLocation, token::Token};
+use crate::{
+    common::SourceLocation,
+    token::{Token, TokenKind},
+};
 
 // is there a better name for this?
 pub trait AstTrait: Debug + Clone + PartialEq {
     fn get_location(&self) -> SourceLocation;
+    fn dump(&self, indent: usize) -> String;
+}
+
+fn get_indent(indent: usize) -> String {
+    let mut result = String::new();
+    for _ in 0..indent {
+        result += "    ";
+    }
+    result
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -98,6 +110,19 @@ impl AstTrait for Ast {
             Ast::Integer(integer) => integer.get_location(),
         }
     }
+
+    fn dump(&self, indent: usize) -> String {
+        match self {
+            Ast::File(file) => file.dump(indent),
+            Ast::Block(block) => block.dump(indent),
+            Ast::Export(export) => export.dump(indent),
+            Ast::Let(lett) => lett.dump(indent),
+            Ast::Unary(unary) => unary.dump(indent),
+            Ast::Binary(binary) => binary.dump(indent),
+            Ast::Name(name) => name.dump(indent),
+            Ast::Integer(integer) => integer.dump(indent),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -109,6 +134,17 @@ pub struct AstFile {
 impl AstTrait for AstFile {
     fn get_location(&self) -> SourceLocation {
         self.end_of_file_token.location.clone()
+    }
+
+    fn dump(&self, indent: usize) -> String {
+        let mut result = String::new();
+        for expression in &self.expressions {
+            result.push('\n');
+            result += &get_indent(indent);
+            result += &expression.dump(indent);
+        }
+        result.push('\n');
+        result
     }
 }
 
@@ -123,19 +159,46 @@ impl AstTrait for AstBlock {
     fn get_location(&self) -> SourceLocation {
         self.open_brace_token.location.clone()
     }
+
+    fn dump(&self, indent: usize) -> String {
+        let mut result = String::new();
+        result.push('{');
+        for expression in &self.expressions {
+            result.push('\n');
+            result += &get_indent(indent + 1);
+            result += &expression.dump(indent + 1);
+        }
+        result.push('\n');
+        result += &get_indent(indent);
+        result.push('}');
+        result
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AstExport {
     pub export_token: Token,
-	pub name_token: Token,
-	pub equals_token: Token,
+    pub name_token: Token,
+    pub equals_token: Token,
     pub value: Box<Ast>,
 }
 
 impl AstTrait for AstExport {
     fn get_location(&self) -> SourceLocation {
         self.name_token.location.clone()
+    }
+
+    fn dump(&self, indent: usize) -> String {
+        let mut result = String::new();
+        result += "export ";
+        result += if let TokenKind::Name(name) = &self.name_token.kind {
+            name
+        } else {
+            unreachable!()
+        };
+        result += " = ";
+        result += &self.value.dump(indent);
+        result
     }
 }
 
@@ -151,6 +214,21 @@ impl AstTrait for AstLet {
     fn get_location(&self) -> SourceLocation {
         self.name_token.location.clone()
     }
+
+    fn dump(&self, indent: usize) -> String {
+        let mut result = String::new();
+        result += "let ";
+        result += if let TokenKind::Name(name) = &self.name_token.kind {
+            name
+        } else {
+            unreachable!()
+        };
+        if let Some(value) = &self.value {
+            result += " = ";
+            result += &value.dump(indent);
+        }
+        result
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -162,6 +240,13 @@ pub struct AstUnary {
 impl AstTrait for AstUnary {
     fn get_location(&self) -> SourceLocation {
         self.operator_token.location.clone()
+    }
+
+    fn dump(&self, indent: usize) -> String {
+        let mut result = String::new();
+        result += &self.operator_token.kind.to_string();
+        result += &self.operand.dump(indent);
+        result
     }
 }
 
@@ -176,6 +261,16 @@ impl AstTrait for AstBinary {
     fn get_location(&self) -> SourceLocation {
         self.operator_token.location.clone()
     }
+
+    fn dump(&self, indent: usize) -> String {
+        let mut result = String::new();
+        result += &self.left.dump(indent);
+        result.push(' ');
+        result += &self.operator_token.kind.to_string();
+        result.push(' ');
+        result += &self.right.dump(indent);
+        result
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -187,6 +282,14 @@ impl AstTrait for AstName {
     fn get_location(&self) -> SourceLocation {
         self.name_token.location.clone()
     }
+
+    fn dump(&self, _indent: usize) -> String {
+        if let TokenKind::Name(name) = &self.name_token.kind {
+            name.clone()
+        } else {
+            unreachable!()
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -197,5 +300,13 @@ pub struct AstInteger {
 impl AstTrait for AstInteger {
     fn get_location(&self) -> SourceLocation {
         self.integer_token.location.clone()
+    }
+
+    fn dump(&self, _indent: usize) -> String {
+        if let TokenKind::Integer(integer) = &self.integer_token.kind {
+            integer.to_string()
+        } else {
+            unreachable!()
+        }
     }
 }

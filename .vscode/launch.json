@@ -6,7 +6,10 @@
 			"type": "cppvsdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/target/debug/functional.exe",
-			"args": [],
+			"args": [
+				"dump_ast",
+				"test.fpl"
+			],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
 			"environment": [],

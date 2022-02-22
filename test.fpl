@@ -1,0 +1,6 @@
+export foo =
+{
+	let a = 1 + 2 * 3
+	export b =
+		5
+}
