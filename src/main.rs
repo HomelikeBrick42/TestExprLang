@@ -2,10 +2,11 @@
 
 use std::{collections::VecDeque, io::Write, process::exit};
 
-use ast::AstFile;
-use parsing::parse_file;
-
-use crate::{ast::AstTrait, lexer::Lexer};
+use crate::{
+    ast::{AstFile, AstTrait},
+    lexer::Lexer,
+    parsing::parse_file,
+};
 
 mod ast;
 mod common;
@@ -14,8 +15,11 @@ mod parsing;
 mod token;
 
 fn print_usage(stream: &mut dyn Write) -> Result<(), std::io::Error> {
-    let program_path = std::env::current_exe().unwrap();
-    let program_str = program_path.to_str().unwrap();
+    let program_str = std::env::current_exe()
+        .ok()
+        .and_then(|pb| pb.file_name().map(|s| s.to_os_string()))
+        .and_then(|s| s.into_string().ok())
+        .unwrap();
     writeln!(stream, "Usage: {} <command> [options]", program_str)?;
     writeln!(stream, "Commands:")?;
     writeln!(stream, "    {} help: Prints this message", program_str)?;
