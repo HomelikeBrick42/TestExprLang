@@ -22,6 +22,64 @@ pub enum BoundNode {
     Integer(BoundInteger),
 }
 
+impl BoundNode {
+    pub fn unwrap_block(&self) -> &BoundBlock {
+        if let BoundNode::Block(block) = self {
+            block
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn unwrap_export(&self) -> &BoundExport {
+        if let BoundNode::Export(export) = self {
+            export
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn unwrap_let(&self) -> &BoundLet {
+        if let BoundNode::Let(lett) = self {
+            lett
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn unwrap_unary(&self) -> &BoundUnary {
+        if let BoundNode::Unary(unary) = self {
+            unary
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn unwrap_binary(&self) -> &BoundBinary {
+        if let BoundNode::Binary(binary) = self {
+            binary
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn unwrap_name(&self) -> &BoundName {
+        if let BoundNode::Name(name) = self {
+            name
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn unwrap_integer(&self) -> &BoundInteger {
+        if let BoundNode::Integer(integer) = self {
+            integer
+        } else {
+            unreachable!()
+        }
+    }
+}
+
 impl BoundNodeTrait for BoundNode {
     fn get_location(&self) -> SourceLocation {
         match self {
@@ -52,7 +110,7 @@ impl BoundNodeTrait for BoundNode {
 pub struct BoundBlock {
     pub location: SourceLocation,
     pub expressions: Vec<Rc<BoundNode>>,
-    pub exported_expressions: HashMap<String, Weak<BoundExport>>,
+    pub exported_expressions: HashMap<String, Weak<BoundNode>>,
     pub type_: Type,
 }
 
@@ -105,7 +163,14 @@ impl BoundNodeTrait for BoundLet {
 }
 
 #[derive(Debug, Clone)]
+pub enum UnaryOperatorKind {
+    Identity,
+    Negation,
+}
+
+#[derive(Debug, Clone)]
 pub struct UnaryOperator {
+    pub kind: UnaryOperatorKind,
     pub operand: Type,
     pub result: Type,
 }
@@ -128,7 +193,16 @@ impl BoundNodeTrait for BoundUnary {
 }
 
 #[derive(Debug, Clone)]
+pub enum BinaryOperatorKind {
+    Addition,
+    Subtraction,
+    Multiplication,
+    Division,
+}
+
+#[derive(Debug, Clone)]
 pub struct BinaryOperator {
+    pub kind: BinaryOperatorKind,
     pub left: Type,
     pub right: Type,
     pub result: Type,
@@ -156,7 +230,7 @@ impl BoundNodeTrait for BoundBinary {
 pub struct BoundName {
     pub location: SourceLocation,
     pub name: String,
-    pub resolved_ast: Weak<BoundNode>,
+    pub resolved_expression: Weak<BoundNode>,
 }
 
 impl BoundNodeTrait for BoundName {
@@ -165,7 +239,7 @@ impl BoundNodeTrait for BoundName {
     }
 
     fn get_type(&self) -> Type {
-        self.resolved_ast.upgrade().unwrap().get_type()
+        self.resolved_expression.upgrade().unwrap().get_type()
     }
 }
 

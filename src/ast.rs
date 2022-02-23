@@ -8,7 +8,7 @@ use crate::{
 // is there a better name for this?
 pub trait AstTrait: Debug + Clone + PartialEq {
     fn get_location(&self) -> SourceLocation;
-    fn dump(&self, indent: usize) -> String;
+    fn pretty_print(&self, indent: usize) -> String;
 }
 
 fn get_indent(indent: usize) -> String {
@@ -111,16 +111,16 @@ impl AstTrait for Ast {
         }
     }
 
-    fn dump(&self, indent: usize) -> String {
+    fn pretty_print(&self, indent: usize) -> String {
         match self {
-            Ast::File(file) => file.dump(indent),
-            Ast::Block(block) => block.dump(indent),
-            Ast::Export(export) => export.dump(indent),
-            Ast::Let(lett) => lett.dump(indent),
-            Ast::Unary(unary) => unary.dump(indent),
-            Ast::Binary(binary) => binary.dump(indent),
-            Ast::Name(name) => name.dump(indent),
-            Ast::Integer(integer) => integer.dump(indent),
+            Ast::File(file) => file.pretty_print(indent),
+            Ast::Block(block) => block.pretty_print(indent),
+            Ast::Export(export) => export.pretty_print(indent),
+            Ast::Let(lett) => lett.pretty_print(indent),
+            Ast::Unary(unary) => unary.pretty_print(indent),
+            Ast::Binary(binary) => binary.pretty_print(indent),
+            Ast::Name(name) => name.pretty_print(indent),
+            Ast::Integer(integer) => integer.pretty_print(indent),
         }
     }
 }
@@ -136,12 +136,12 @@ impl AstTrait for AstFile {
         self.end_of_file_token.location.clone()
     }
 
-    fn dump(&self, indent: usize) -> String {
+    fn pretty_print(&self, indent: usize) -> String {
         let mut result = String::new();
         for expression in &self.expressions {
             result.push('\n');
             result += &get_indent(indent);
-            result += &expression.dump(indent);
+            result += &expression.pretty_print(indent);
         }
         result.push('\n');
         result
@@ -160,13 +160,13 @@ impl AstTrait for AstBlock {
         self.open_brace_token.location.clone()
     }
 
-    fn dump(&self, indent: usize) -> String {
+    fn pretty_print(&self, indent: usize) -> String {
         let mut result = String::new();
         result.push('{');
         for expression in &self.expressions {
             result.push('\n');
             result += &get_indent(indent + 1);
-            result += &expression.dump(indent + 1);
+            result += &expression.pretty_print(indent + 1);
         }
         result.push('\n');
         result += &get_indent(indent);
@@ -188,7 +188,7 @@ impl AstTrait for AstExport {
         self.name_token.location.clone()
     }
 
-    fn dump(&self, indent: usize) -> String {
+    fn pretty_print(&self, indent: usize) -> String {
         let mut result = String::new();
         result += "export ";
         result += if let TokenKind::Name(name) = &self.name_token.kind {
@@ -197,7 +197,7 @@ impl AstTrait for AstExport {
             unreachable!()
         };
         result += " = ";
-        result += &self.value.dump(indent);
+        result += &self.value.pretty_print(indent);
         result
     }
 }
@@ -215,7 +215,7 @@ impl AstTrait for AstLet {
         self.name_token.location.clone()
     }
 
-    fn dump(&self, indent: usize) -> String {
+    fn pretty_print(&self, indent: usize) -> String {
         let mut result = String::new();
         result += "let ";
         result += if let TokenKind::Name(name) = &self.name_token.kind {
@@ -225,7 +225,7 @@ impl AstTrait for AstLet {
         };
         if let Some(value) = &self.value {
             result += " = ";
-            result += &value.dump(indent);
+            result += &value.pretty_print(indent);
         }
         result
     }
@@ -242,10 +242,10 @@ impl AstTrait for AstUnary {
         self.operator_token.location.clone()
     }
 
-    fn dump(&self, indent: usize) -> String {
+    fn pretty_print(&self, indent: usize) -> String {
         let mut result = String::new();
         result += &self.operator_token.kind.to_string();
-        result += &self.operand.dump(indent);
+        result += &self.operand.pretty_print(indent);
         result
     }
 }
@@ -262,13 +262,13 @@ impl AstTrait for AstBinary {
         self.operator_token.location.clone()
     }
 
-    fn dump(&self, indent: usize) -> String {
+    fn pretty_print(&self, indent: usize) -> String {
         let mut result = String::new();
-        result += &self.left.dump(indent);
+        result += &self.left.pretty_print(indent);
         result.push(' ');
         result += &self.operator_token.kind.to_string();
         result.push(' ');
-        result += &self.right.dump(indent);
+        result += &self.right.pretty_print(indent);
         result
     }
 }
@@ -283,7 +283,7 @@ impl AstTrait for AstName {
         self.name_token.location.clone()
     }
 
-    fn dump(&self, _indent: usize) -> String {
+    fn pretty_print(&self, _indent: usize) -> String {
         if let TokenKind::Name(name) = &self.name_token.kind {
             name.clone()
         } else {
@@ -302,7 +302,7 @@ impl AstTrait for AstInteger {
         self.integer_token.location.clone()
     }
 
-    fn dump(&self, _indent: usize) -> String {
+    fn pretty_print(&self, _indent: usize) -> String {
         if let TokenKind::Integer(integer) = &self.integer_token.kind {
             integer.to_string()
         } else {

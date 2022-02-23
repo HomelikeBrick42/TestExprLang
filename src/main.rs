@@ -1,14 +1,22 @@
 #![allow(dead_code)]
 
-use std::{collections::VecDeque, io::Write, process::exit};
+use std::{
+    collections::{HashMap, VecDeque},
+    io::Write,
+    process::exit,
+};
+
+use ast::Ast;
+use binding::bind_ast;
 
 use crate::{
-    ast::{AstFile, AstTrait},
+    ast::{AstFile},
     lexer::Lexer,
     parsing::parse_file,
 };
 
 mod ast;
+mod binding;
 mod bound_nodes;
 mod common;
 mod lexer;
@@ -28,6 +36,11 @@ fn print_usage(stream: &mut dyn Write) -> Result<(), std::io::Error> {
     writeln!(
         stream,
         "    {} dump_ast <file>: Dumps the ast of the program",
+        program_str,
+    )?;
+    writeln!(
+        stream,
+        "    {} dump_ir <file>: Dumps the ir of the program",
         program_str,
     )?;
     Ok(())
@@ -88,7 +101,44 @@ fn main() {
                 exit(1)
             });
             let file = parse_ast_or_error(filepath);
-            writeln!(std::io::stdout(), "{}", file.dump(0)).unwrap();
+            println!("{:#?}", file);
+        }
+
+        "dump_ir" => {
+            let filepath = args.pop_front().unwrap_or_else(|| {
+                let mut stderr = std::io::stderr();
+                writeln!(stderr, "Please specify a file").unwrap();
+                print_usage(&mut stderr).unwrap();
+                exit(1)
+            });
+            let file = parse_ast_or_error(filepath);
+            let bound_file =
+                bind_ast(&Ast::File(file), &mut HashMap::new()).unwrap_or_else(|error| {
+                    writeln!(
+                        std::io::stderr(),
+                        "{}:{}:{}: Compile Error: {}",
+                        error.location.filepath,
+                        error.location.line,
+                        error.location.column,
+                        error.message,
+                    )
+                    .unwrap();
+                    for note in error.notes {
+                        if let Some(location) = &note.location {
+                            writeln!(
+                                std::io::stderr(),
+                                "{}:{}:{}: ",
+                                location.filepath,
+                                location.line,
+                                location.column,
+                            )
+                            .unwrap();
+                        }
+                        writeln!(std::io::stderr(), "Note: {}", note.message).unwrap();
+                    }
+                    exit(1)
+                });
+            println!("{:#?}", bound_file);
         }
 
         _ => {
