@@ -9,6 +9,7 @@ use std::{
 
 use ast::Ast;
 use binding::bind_ast;
+use common::CompileError;
 
 use crate::{
     ast::AstFile,
@@ -55,31 +56,33 @@ fn parse_ast_or_error(filepath: String) -> AstFile {
         exit(1)
     });
     let mut lexer = Lexer::new(filepath, &source);
-    parse_file(&mut lexer).unwrap_or_else(|error| {
-        writeln!(
-            std::io::stderr(),
-            "{}:{}:{}: Compile Error: {}",
-            error.location.filepath,
-            error.location.line,
-            error.location.column,
-            error.message,
-        )
-        .unwrap();
-        for note in error.notes {
-            if let Some(location) = &note.location {
-                writeln!(
-                    std::io::stderr(),
-                    "{}:{}:{}: ",
-                    location.filepath,
-                    location.line,
-                    location.column,
-                )
-                .unwrap();
-            }
-            writeln!(std::io::stderr(), "Note: {}", note.message).unwrap();
+    parse_file(&mut lexer).unwrap_or_else(|error| report_compile_error(error))
+}
+
+fn report_compile_error(error: CompileError) -> ! {
+    writeln!(
+        std::io::stderr(),
+        "{}:{}:{}: Compile Error: {}",
+        error.location.filepath,
+        error.location.line,
+        error.location.column,
+        error.message,
+    )
+    .unwrap();
+    for note in error.notes {
+        if let Some(location) = &note.location {
+            writeln!(
+                std::io::stderr(),
+                "{}:{}:{}: ",
+                location.filepath,
+                location.line,
+                location.column,
+            )
+            .unwrap();
         }
-        exit(1)
-    })
+        writeln!(std::io::stderr(), "Note: {}", note.message).unwrap();
+    }
+    exit(1)
 }
 
 fn main() {
@@ -128,31 +131,8 @@ fn main() {
             }));
             names.insert("print_integer".to_string(), Rc::downgrade(&print_integer));
 
-            let bound_file = bind_ast(&Ast::File(file), &mut names).unwrap_or_else(|error| {
-                writeln!(
-                    std::io::stderr(),
-                    "{}:{}:{}: Compile Error: {}",
-                    error.location.filepath,
-                    error.location.line,
-                    error.location.column,
-                    error.message,
-                )
-                .unwrap();
-                for note in error.notes {
-                    if let Some(location) = &note.location {
-                        writeln!(
-                            std::io::stderr(),
-                            "{}:{}:{}: ",
-                            location.filepath,
-                            location.line,
-                            location.column,
-                        )
-                        .unwrap();
-                    }
-                    writeln!(std::io::stderr(), "Note: {}", note.message).unwrap();
-                }
-                exit(1)
-            });
+            let bound_file = bind_ast(&Ast::File(file), &mut names)
+                .unwrap_or_else(|error| report_compile_error(error));
             println!("{:#?}", bound_file);
         }
 
