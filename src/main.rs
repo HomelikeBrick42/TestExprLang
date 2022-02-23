@@ -4,13 +4,16 @@ use std::{
     collections::{HashMap, VecDeque},
     io::Write,
     process::exit,
+    rc::Rc,
 };
 
 use ast::Ast;
 use binding::bind_ast;
 
 use crate::{
-    ast::{AstFile},
+    ast::AstFile,
+    bound_nodes::{BoundNode, BoundPrintInteger},
+    common::SourceLocation,
     lexer::Lexer,
     parsing::parse_file,
 };
@@ -112,32 +115,44 @@ fn main() {
                 exit(1)
             });
             let file = parse_ast_or_error(filepath);
-            let bound_file =
-                bind_ast(&Ast::File(file), &mut HashMap::new()).unwrap_or_else(|error| {
-                    writeln!(
-                        std::io::stderr(),
-                        "{}:{}:{}: Compile Error: {}",
-                        error.location.filepath,
-                        error.location.line,
-                        error.location.column,
-                        error.message,
-                    )
-                    .unwrap();
-                    for note in error.notes {
-                        if let Some(location) = &note.location {
-                            writeln!(
-                                std::io::stderr(),
-                                "{}:{}:{}: ",
-                                location.filepath,
-                                location.line,
-                                location.column,
-                            )
-                            .unwrap();
-                        }
-                        writeln!(std::io::stderr(), "Note: {}", note.message).unwrap();
+
+            let mut names = HashMap::new();
+
+            let print_integer = Rc::new(BoundNode::PrintInteger(BoundPrintInteger {
+                location: SourceLocation {
+                    filepath: "builtin.lang".to_string(),
+                    position: 0,
+                    line: 1,
+                    column: 1,
+                },
+            }));
+            names.insert("print_integer".to_string(), Rc::downgrade(&print_integer));
+
+            let bound_file = bind_ast(&Ast::File(file), &mut names).unwrap_or_else(|error| {
+                writeln!(
+                    std::io::stderr(),
+                    "{}:{}:{}: Compile Error: {}",
+                    error.location.filepath,
+                    error.location.line,
+                    error.location.column,
+                    error.message,
+                )
+                .unwrap();
+                for note in error.notes {
+                    if let Some(location) = &note.location {
+                        writeln!(
+                            std::io::stderr(),
+                            "{}:{}:{}: ",
+                            location.filepath,
+                            location.line,
+                            location.column,
+                        )
+                        .unwrap();
                     }
-                    exit(1)
-                });
+                    writeln!(std::io::stderr(), "Note: {}", note.message).unwrap();
+                }
+                exit(1)
+            });
             println!("{:#?}", bound_file);
         }
 

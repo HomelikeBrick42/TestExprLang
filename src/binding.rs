@@ -5,12 +5,12 @@ use std::{
 
 use crate::{
     ast::{
-        Ast, AstBinary, AstBlock, AstExport, AstFile, AstInteger, AstLet, AstName, AstTrait,
-        AstUnary,
+        Ast, AstBinary, AstBlock, AstCall, AstExport, AstFile, AstInteger, AstLet, AstName,
+        AstTrait, AstUnary,
     },
     bound_nodes::{
-        BinaryOperator, BinaryOperatorKind, BoundBinary, BoundBlock, BoundExport, BoundInteger,
-        BoundLet, BoundName, BoundNode, BoundNodeTrait, BoundUnary, UnaryOperator,
+        BinaryOperator, BinaryOperatorKind, BoundBinary, BoundBlock, BoundCall, BoundExport,
+        BoundInteger, BoundLet, BoundName, BoundNode, BoundNodeTrait, BoundUnary, UnaryOperator,
         UnaryOperatorKind,
     },
     common::{CompileError, CompileNote},
@@ -46,6 +46,7 @@ impl BindingTrait for Ast {
             Ast::Binary(binary) => binary.bind(names),
             Ast::Name(name) => name.bind(names),
             Ast::Integer(integer) => integer.bind(names),
+            Ast::Call(call) => call.bind(names),
         }
     }
 }
@@ -77,7 +78,7 @@ impl BindingTrait for AstFile {
             location: self.get_location(),
             expressions,
             exported_expressions,
-            type_: Type::BlockType(BlockType { exported_types }),
+            block_type: Type::Block(BlockType { exported_types }),
         })))
     }
 }
@@ -109,7 +110,7 @@ impl BindingTrait for AstBlock {
             location: self.get_location(),
             expressions,
             exported_expressions,
-            type_: Type::BlockType(BlockType { exported_types }),
+            block_type: Type::Block(BlockType { exported_types }),
         })))
     }
 }
@@ -372,5 +373,62 @@ impl BindingTrait for AstInteger {
                 value,
             })))
         }
+    }
+}
+
+impl BindingTrait for AstCall {
+    fn bind(
+        &self,
+        names: &mut HashMap<String, Weak<BoundNode>>,
+    ) -> Result<Rc<BoundNode>, CompileError> {
+        let operand = self.operand.bind(names)?;
+        let proc_type = if let Type::Proc(proc_type) = operand.get_type() {
+            proc_type
+        } else {
+            return Err(CompileError {
+                location: self.close_parenthesis_token.location.clone(),
+                message: format!("Cannot call a non procedure"),
+                notes: vec![CompileNote {
+                    location: Some(operand.get_location()),
+                    message: format!("The type was {:?}", operand.get_type()),
+                }],
+            });
+        };
+
+        if proc_type.parameter_types.len() != self.arguments.len() {
+            return Err(CompileError {
+                location: self.close_parenthesis_token.location.clone(),
+                message: format!(
+                    "Invalid number of arguments for procedure, expected {} arguments but got {}",
+                    proc_type.parameter_types.len(),
+                    self.arguments.len(),
+                ),
+                notes: vec![],
+            });
+        }
+
+        let mut arguments = vec![];
+        for (i, expression) in self.arguments.iter().enumerate() {
+            let argument = expression.bind(names)?;
+            if argument.get_type() != proc_type.parameter_types[i] {
+                return Err(CompileError {
+                    location: self.close_parenthesis_token.location.clone(),
+                    message: format!(
+                        "Wrong argument type for procedure, expected type {:?} but got type {:?}",
+                        proc_type.parameter_types[i],
+                        argument.get_type(),
+                    ),
+                    notes: vec![],
+                });
+            }
+            arguments.push(argument);
+        }
+
+        Ok(Rc::new(BoundNode::Call(BoundCall {
+            location: self.get_location(),
+            operand,
+            arguments,
+            proc_type: Type::Proc(proc_type),
+        })))
     }
 }

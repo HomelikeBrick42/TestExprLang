@@ -29,6 +29,7 @@ pub enum Ast {
     Binary(AstBinary),
     Name(AstName),
     Integer(AstInteger),
+    Call(AstCall),
 }
 
 impl Ast {
@@ -95,6 +96,14 @@ impl Ast {
             unreachable!()
         }
     }
+
+    pub fn unwrap_call(&self) -> &AstCall {
+        if let Ast::Call(call) = self {
+            call
+        } else {
+            unreachable!()
+        }
+    }
 }
 
 impl AstTrait for Ast {
@@ -108,6 +117,7 @@ impl AstTrait for Ast {
             Ast::Binary(binary) => binary.get_location(),
             Ast::Name(name) => name.get_location(),
             Ast::Integer(integer) => integer.get_location(),
+            Ast::Call(call) => call.get_location(),
         }
     }
 
@@ -121,6 +131,7 @@ impl AstTrait for Ast {
             Ast::Binary(binary) => binary.pretty_print(indent),
             Ast::Name(name) => name.pretty_print(indent),
             Ast::Integer(integer) => integer.pretty_print(indent),
+            Ast::Call(call) => call.pretty_print(indent),
         }
     }
 }
@@ -308,5 +319,33 @@ impl AstTrait for AstInteger {
         } else {
             unreachable!()
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AstCall {
+    pub operand: Box<Ast>,
+    pub open_parenthesis_token: Token,
+    pub arguments: Vec<Ast>,
+    pub close_parenthesis_token: Token,
+}
+
+impl AstTrait for AstCall {
+    fn get_location(&self) -> SourceLocation {
+        self.open_parenthesis_token.location.clone()
+    }
+
+    fn pretty_print(&self, indent: usize) -> String {
+        let mut result = String::new();
+        result += &self.operand.pretty_print(indent);
+        result.push('(');
+        for (i, expression) in self.arguments.iter().enumerate() {
+            if i > 0 {
+                result += ", ";
+            }
+            result += &expression.pretty_print(indent);
+        }
+        result.push(')');
+        result
     }
 }

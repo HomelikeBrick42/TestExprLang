@@ -1,5 +1,8 @@
 use crate::{
-    ast::{Ast, AstBinary, AstBlock, AstExport, AstFile, AstInteger, AstLet, AstName, AstUnary},
+    ast::{
+        Ast, AstBinary, AstBlock, AstCall, AstExport, AstFile, AstInteger, AstLet, AstName,
+        AstUnary,
+    },
     common::CompileError,
     lexer::Lexer,
     token::TokenKind,
@@ -87,6 +90,56 @@ fn parse_binary_expression(
     }
 
     'main_loop: loop {
+        while lexer.peek_kind()? == TokenKind::OpenParenthesis {
+            let open_parenthesis_token = lexer.next_token()?;
+            allow_newline(lexer)?;
+            let mut first = true;
+            let mut arguments = vec![];
+            while lexer.peek_kind()? != TokenKind::CloseParenthesis
+                && lexer.peek_kind()? != TokenKind::EndOfFile
+            {
+                if first {
+                    first = false;
+                } else {
+                    let comma = lexer.next_token()?;
+                    if comma.kind != TokenKind::Comma {
+                        return Err(CompileError {
+                            location: comma.location.clone(),
+                            message: format!(
+                                "Expected {} to seperate arguments in the call, but got {}",
+                                TokenKind::Comma.to_string(),
+                                comma.kind.to_string(),
+                            ),
+                            notes: vec![],
+                        });
+                    }
+                    allow_newline(lexer)?;
+                    if lexer.peek_kind()? == TokenKind::CloseParenthesis {
+                        break;
+                    }
+                }
+                arguments.push(parse_expression(lexer)?);
+            }
+            let close_parenthesis_token = lexer.next_token()?;
+            if close_parenthesis_token.kind != TokenKind::CloseParenthesis {
+                return Err(CompileError {
+                    location: close_parenthesis_token.location.clone(),
+                    message: format!(
+                        "Expected {} at the end of the call, but got {}",
+                        TokenKind::CloseParenthesis.to_string(),
+                        close_parenthesis_token.kind.to_string(),
+                    ),
+                    notes: vec![],
+                });
+            }
+            left = Ast::Call(AstCall {
+                operand: Box::new(left),
+                open_parenthesis_token,
+                arguments,
+                close_parenthesis_token,
+            })
+        }
+
         let binary_precedence = get_binary_precedence(lexer.peek_kind()?);
         if binary_precedence <= parent_precedence {
             break 'main_loop;

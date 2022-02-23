@@ -4,3 +4,5 @@ export foo =
 	export b =
 		5
 }
+
+print_integer(5 + 5)

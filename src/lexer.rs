@@ -268,6 +268,8 @@ impl Lexer {
                 '{' => Ok(self.single_char_token(TokenKind::OpenBrace)),
                 '}' => Ok(self.single_char_token(TokenKind::CloseBrace)),
 
+                ',' => Ok(self.single_char_token(TokenKind::Comma)),
+
                 '+' => Ok(self.double_char_token(TokenKind::Plus, '=', TokenKind::PlusEqual)),
                 '-' => Ok(self.double_char_token_2_choice(
                     TokenKind::Minus,

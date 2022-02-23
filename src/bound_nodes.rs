@@ -4,7 +4,10 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{common::SourceLocation, types::Type};
+use crate::{
+    common::SourceLocation,
+    types::{ProcType, Type},
+};
 
 pub trait BoundNodeTrait: Debug + Clone {
     fn get_location(&self) -> SourceLocation;
@@ -20,6 +23,8 @@ pub enum BoundNode {
     Binary(BoundBinary),
     Name(BoundName),
     Integer(BoundInteger),
+    Call(BoundCall),
+    PrintInteger(BoundPrintInteger),
 }
 
 impl BoundNode {
@@ -78,6 +83,22 @@ impl BoundNode {
             unreachable!()
         }
     }
+
+    pub fn unwrap_call(&self) -> &BoundCall {
+        if let BoundNode::Call(call) = self {
+            call
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn unwrap_print_integer(&self) -> &BoundPrintInteger {
+        if let BoundNode::PrintInteger(print_integer) = self {
+            print_integer
+        } else {
+            unreachable!()
+        }
+    }
 }
 
 impl BoundNodeTrait for BoundNode {
@@ -90,6 +111,8 @@ impl BoundNodeTrait for BoundNode {
             BoundNode::Binary(binary) => binary.get_location(),
             BoundNode::Name(name) => name.get_location(),
             BoundNode::Integer(integer) => integer.get_location(),
+            BoundNode::Call(call) => call.get_location(),
+            BoundNode::PrintInteger(print_integer) => print_integer.get_location(),
         }
     }
 
@@ -102,6 +125,8 @@ impl BoundNodeTrait for BoundNode {
             BoundNode::Binary(binary) => binary.get_type(),
             BoundNode::Name(name) => name.get_type(),
             BoundNode::Integer(integer) => integer.get_type(),
+            BoundNode::Call(call) => call.get_type(),
+            BoundNode::PrintInteger(print_integer) => print_integer.get_type(),
         }
     }
 }
@@ -111,7 +136,7 @@ pub struct BoundBlock {
     pub location: SourceLocation,
     pub expressions: Vec<Rc<BoundNode>>,
     pub exported_expressions: HashMap<String, Weak<BoundNode>>,
-    pub type_: Type,
+    pub block_type: Type,
 }
 
 impl BoundNodeTrait for BoundBlock {
@@ -120,7 +145,7 @@ impl BoundNodeTrait for BoundBlock {
     }
 
     fn get_type(&self) -> Type {
-        self.type_.clone()
+        self.block_type.clone()
     }
 }
 
@@ -256,5 +281,41 @@ impl BoundNodeTrait for BoundInteger {
 
     fn get_type(&self) -> Type {
         Type::Integer
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BoundCall {
+    pub location: SourceLocation,
+    pub operand: Rc<BoundNode>,
+    pub arguments: Vec<Rc<BoundNode>>,
+    pub proc_type: Type,
+}
+
+impl BoundNodeTrait for BoundCall {
+    fn get_location(&self) -> SourceLocation {
+        self.location.clone()
+    }
+
+    fn get_type(&self) -> Type {
+        self.proc_type.clone()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BoundPrintInteger {
+    pub location: SourceLocation,
+}
+
+impl BoundNodeTrait for BoundPrintInteger {
+    fn get_location(&self) -> SourceLocation {
+        self.location.clone()
+    }
+
+    fn get_type(&self) -> Type {
+        Type::Proc(ProcType {
+            parameter_types: vec![Type::Integer],
+            return_type: Box::new(Type::Void),
+        })
     }
 }

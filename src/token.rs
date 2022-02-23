@@ -21,6 +21,7 @@ pub enum TokenKind {
     // Symbols
     LeftArrow,
     RightArrow,
+    Comma,
 
     // Operators
     Plus,
@@ -67,6 +68,7 @@ impl ToString for TokenKind {
             // Symbols
             TokenKind::LeftArrow => "<-".to_string(),
             TokenKind::RightArrow => "->".to_string(),
+            TokenKind::Comma => ",".to_string(),
 
             // Operators
             TokenKind::Plus => "+".to_string(),
