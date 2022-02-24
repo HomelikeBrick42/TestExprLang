@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     common::{CompileError, SourceLocation},
     token::{Token, TokenKind},
@@ -6,7 +8,7 @@ use crate::{
 #[derive(Clone)]
 pub struct Lexer {
     filepath: String,
-    source: Vec<char>,
+    source: Rc<Vec<char>>,
     position: usize,
     line: usize,
     column: usize,
@@ -16,7 +18,7 @@ impl Lexer {
     pub fn new(filepath: String, source: &str) -> Lexer {
         Lexer {
             filepath,
-            source: source.chars().into_iter().collect(),
+            source: Rc::new(source.chars().into_iter().collect()),
             position: 0,
             line: 1,
             column: 1,
