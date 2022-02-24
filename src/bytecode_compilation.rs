@@ -67,7 +67,7 @@ impl Compilable for BoundUnary {
         self.operand.compile(bytecode);
         match &self.operator.kind {
             UnaryOperatorKind::Identity => {}
-            UnaryOperatorKind::Negation => todo!(),
+            UnaryOperatorKind::Negation => bytecode.push(Bytecode::NegateInteger),
         }
     }
 }

@@ -72,6 +72,13 @@ pub fn execute_bytecode(
                 ))));
             }
 
+            Bytecode::NegateInteger => {
+                let value = stack.pop().unwrap();
+                stack.push(Rc::new(RefCell::new(BytecodeValue::Integer(
+                    -value.borrow().unwrap_integer(),
+                ))));
+            }
+
             Bytecode::PrintInteger => {
                 println!("{}", &stack.pop().unwrap().borrow().unwrap_integer());
             }

@@ -14,6 +14,7 @@ pub enum Bytecode {
     SubInteger,
     MulInteger,
     DivInteger,
+    NegateInteger,
     PrintInteger,
 }
 

@@ -1,8 +1,3 @@
-export foo =
-{
-	let a = 1 + 2 * 3
-	export b =
-		5
-}
-
-print_integer(5 + 5)
+let a = 1 + 2 * 3
+let b = a * -a
+print_integer(b)
