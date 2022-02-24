@@ -18,7 +18,7 @@ use crate::{
     types::{BlockType, Type},
 };
 
-trait BindingTrait {
+trait BindingTrait: AstTrait {
     fn bind(
         &self,
         names: &mut HashMap<String, Weak<BoundNode>>,

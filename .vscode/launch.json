@@ -7,7 +7,7 @@
 			"request": "launch",
 			"program": "${workspaceFolder}/target/debug/lang.exe",
 			"args": [
-				"dump_ir",
+				"run",
 				"test.lang"
 			],
 			"stopAtEntry": false,

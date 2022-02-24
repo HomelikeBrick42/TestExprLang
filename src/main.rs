@@ -9,7 +9,10 @@ use std::{
 
 use ast::Ast;
 use binding::bind_ast;
+use bytecode::Bytecode;
+use bytecode_compilation::compile_bytecode;
 use common::CompileError;
+use execute::execute_bytecode;
 
 use crate::{
     ast::AstFile,
@@ -22,7 +25,10 @@ use crate::{
 mod ast;
 mod binding;
 mod bound_nodes;
+mod bytecode;
+mod bytecode_compilation;
 mod common;
+mod execute;
 mod lexer;
 mod parsing;
 mod token;
@@ -47,6 +53,7 @@ fn print_usage(stream: &mut dyn Write) -> Result<(), std::io::Error> {
         "    {} dump_ir <file>: Dumps the ir of the program",
         program_str,
     )?;
+    writeln!(stream, "    {} run <file>: Runs the program", program_str,)?;
     Ok(())
 }
 
@@ -60,27 +67,23 @@ fn parse_ast_or_error(filepath: String) -> AstFile {
 }
 
 fn report_compile_error(error: CompileError) -> ! {
+    let mut stderr = std::io::stderr();
     writeln!(
-        std::io::stderr(),
+        stderr,
         "{}:{}:{}: Compile Error: {}",
-        error.location.filepath,
-        error.location.line,
-        error.location.column,
-        error.message,
+        error.location.filepath, error.location.line, error.location.column, error.message,
     )
     .unwrap();
     for note in error.notes {
         if let Some(location) = &note.location {
             writeln!(
-                std::io::stderr(),
+                stderr,
                 "{}:{}:{}: ",
-                location.filepath,
-                location.line,
-                location.column,
+                location.filepath, location.line, location.column,
             )
             .unwrap();
         }
-        writeln!(std::io::stderr(), "Note: {}", note.message).unwrap();
+        writeln!(stderr, "Note: {}", note.message).unwrap();
     }
     exit(1)
 }
@@ -134,6 +137,38 @@ fn main() {
             let bound_file = bind_ast(&Ast::File(file), &mut names)
                 .unwrap_or_else(|error| report_compile_error(error));
             println!("{:#?}", bound_file);
+        }
+
+        "run" => {
+            let filepath = args.pop_front().unwrap_or_else(|| {
+                let mut stderr = std::io::stderr();
+                writeln!(stderr, "Please specify a file").unwrap();
+                print_usage(&mut stderr).unwrap();
+                exit(1)
+            });
+            let file = parse_ast_or_error(filepath);
+
+            let mut names = HashMap::new();
+
+            let print_integer = Rc::new(BoundNode::PrintInteger(BoundPrintInteger {
+                location: SourceLocation {
+                    filepath: "builtin.lang".to_string(),
+                    position: 0,
+                    line: 1,
+                    column: 1,
+                },
+            }));
+            names.insert("print_integer".to_string(), Rc::downgrade(&print_integer));
+
+            let bound_file = bind_ast(&Ast::File(file), &mut names)
+                .unwrap_or_else(|error| report_compile_error(error));
+
+            let mut bytecode = vec![];
+            compile_bytecode(&print_integer, &mut bytecode);
+            bytecode.push(Bytecode::Store("print_integer".to_string()));
+            compile_bytecode(&bound_file, &mut bytecode);
+            bytecode.push(Bytecode::Exit);
+            execute_bytecode(&bytecode, Vec::new());
         }
 
         _ => {
