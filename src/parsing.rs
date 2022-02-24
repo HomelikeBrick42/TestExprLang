@@ -172,6 +172,24 @@ fn parse_primary_expression(lexer: &mut Lexer) -> Result<Ast, CompileError> {
 
         TokenKind::OpenBrace => Ok(Ast::Block(parse_block(lexer)?)),
 
+        TokenKind::OpenParenthesis => {
+            lexer.next_token()?;
+            let expression = parse_expression(lexer)?;
+            let close_parenthesis_token = lexer.next_token()?;
+            if close_parenthesis_token.kind != TokenKind::CloseParenthesis {
+                return Err(CompileError {
+                    location: close_parenthesis_token.location.clone(),
+                    message: format!(
+                        "Expected {} to close the opening (, but got {}",
+                        TokenKind::CloseParenthesis.to_string(),
+                        close_parenthesis_token.kind.to_string(),
+                    ),
+                    notes: vec![],
+                });
+            }
+            Ok(expression)
+        }
+
         TokenKind::Export => {
             let export_token = lexer.next_token()?;
             let name_token = lexer.next_token()?;
